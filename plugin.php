@@ -1,6 +1,6 @@
 <?php
 
-add_action( 'plugins_loaded', 'WPAPIYoast_init' );
+add_action('plugins_loaded', 'WPAPIYoast_init');
 
 /**
  * Plugin Name: Yoast to REST API
@@ -10,7 +10,8 @@ add_action( 'plugins_loaded', 'WPAPIYoast_init' );
  * Version: 1.4.1
  * Plugin URI: https://github.com/niels-garve/yoast-to-rest-api
  */
-class Yoast_To_REST_API {
+class Yoast_To_REST_API
+{
 
 	protected $keys = array(
 		'yoast_wpseo_focuskw',
@@ -31,63 +32,70 @@ class Yoast_To_REST_API {
 		'yoast_wpseo_twitter-image'
 	);
 
-	function __construct() {
-		add_action( 'rest_api_init', array( $this, 'add_yoast_data' ) );
+	function __construct()
+	{
+		add_action('rest_api_init', array($this, 'add_yoast_data'));
 	}
 
-	function add_yoast_data() {
+	function add_yoast_data()
+	{
 		// Posts
-		register_rest_field( 'post',
+		register_rest_field(
+			'post',
 			'yoast_meta',
 			array(
-				'get_callback'    => array( $this, 'wp_api_encode_yoast' ),
-				'update_callback' => array( $this, 'wp_api_update_yoast' ),
+				'get_callback'    => array($this, 'wp_api_encode_yoast'),
+				'update_callback' => array($this, 'wp_api_update_yoast'),
 				'schema'          => null,
 			)
 		);
 
 		// Pages
-		register_rest_field( 'page',
+		register_rest_field(
+			'page',
 			'yoast_meta',
 			array(
-				'get_callback'    => array( $this, 'wp_api_encode_yoast' ),
-				'update_callback' => array( $this, 'wp_api_update_yoast' ),
+				'get_callback'    => array($this, 'wp_api_encode_yoast'),
+				'update_callback' => array($this, 'wp_api_update_yoast'),
 				'schema'          => null,
 			)
 		);
 
 		// Category
-		register_rest_field( 'category',
+		register_rest_field(
+			'category',
 			'yoast_meta',
 			array(
-				'get_callback'    => array( $this, 'wp_api_encode_yoast_category' ),
+				'get_callback'    => array($this, 'wp_api_encode_yoast_category'),
 				'update_callback' => null,
 				'schema'          => null,
 			)
 		);
 
 		// Tag
-		register_rest_field( 'tag',
+		register_rest_field(
+			'tag',
 			'yoast_meta',
 			array(
-				'get_callback'    => array( $this, 'wp_api_encode_yoast_tag' ),
+				'get_callback'    => array($this, 'wp_api_encode_yoast_tag'),
 				'update_callback' => null,
 				'schema'          => null,
 			)
 		);
 
 		// Public custom post types
-		$types = get_post_types( array(
+		$types = get_post_types(array(
 			'public'   => true,
 			'_builtin' => false
-		) );
+		));
 
-		foreach ( $types as $key => $type ) {
-			register_rest_field( $type,
+		foreach ($types as $key => $type) {
+			register_rest_field(
+				$type,
 				'yoast_meta',
 				array(
-					'get_callback'    => array( $this, 'wp_api_encode_yoast' ),
-					'update_callback' => array( $this, 'wp_api_update_yoast' ),
+					'get_callback'    => array($this, 'wp_api_encode_yoast'),
+					'update_callback' => array($this, 'wp_api_update_yoast'),
 					'schema'          => null,
 				)
 			);
@@ -103,33 +111,25 @@ class Yoast_To_REST_API {
 	 *
 	 * @return array
 	 */
-	function wp_api_update_yoast( $value, $data, $field_name ) {
+	function wp_api_update_yoast($value, $data, $field_name)
+	{
 
-		foreach ( $value as $k => $v ) {
+		foreach ($value as $k => $v) {
 
-			if ( in_array( $k, $this->keys ) ) {
-				! empty( $k ) ? update_post_meta( $data->ID, '_' . $k, $v ) : null;
+			if (in_array($k, $this->keys)) {
+				!empty($k) ? update_post_meta($data->ID, '_' . $k, $v) : null;
 			}
 		}
 
-		return $this->wp_api_encode_yoast( $data->ID, null, null );
+		return $this->wp_api_encode_yoast($data->ID, null, null);
 	}
 
-	function wp_api_encode_yoast( $p, $field_name, $request ) {
-		$wpseo_frontend = WPSEO_Frontend_To_REST_API::get_instance();
-		$wpseo_frontend->reset();
-
-		query_posts( array(
-			'p'         => $p['id'], // ID of a page, post, or custom type
-			'post_type' => 'any'
-		) );
-
-		the_post();
-
+	function wp_api_encode_yoast($p, $field_name, $request)
+	{
 		$yoast_meta = array(
-			'yoast_wpseo_title'     => $wpseo_frontend->get_content_title(),
-			'yoast_wpseo_metadesc'  => $wpseo_frontend->metadesc( false ),
-			'yoast_wpseo_canonical' => $wpseo_frontend->canonical( false ),
+			'yoast_wpseo_title'     => YoastSEO()->meta->for_post($p['id'])->title,
+			'yoast_wpseo_metadesc'  => YoastSEO()->meta->for_post($p['id'])->description,
+			'yoast_wpseo_canonical' => YoastSEO()->meta->for_post($p['id'])->canonical,
 		);
 
 		wp_reset_query();
@@ -137,22 +137,24 @@ class Yoast_To_REST_API {
 		return (array) $yoast_meta;
 	}
 
-	private function wp_api_encode_taxonomy() {
+	private function wp_api_encode_taxonomy()
+	{
 		$wpseo_frontend = WPSEO_Frontend_To_REST_API::get_instance();
 		$wpseo_frontend->reset();
 
 		$yoast_meta = array(
 			'yoast_wpseo_title'    => $wpseo_frontend->get_taxonomy_title(),
-			'yoast_wpseo_metadesc' => $wpseo_frontend->metadesc( false ),
+			'yoast_wpseo_metadesc' => $wpseo_frontend->metadesc(false),
 		);
 
 		return (array) $yoast_meta;
 	}
 
-	function wp_api_encode_yoast_category( $category ) {
-		query_posts( array(
+	function wp_api_encode_yoast_category($category)
+	{
+		query_posts(array(
 			'cat' => $category['id'],
-		) );
+		));
 
 		the_post();
 
@@ -163,10 +165,11 @@ class Yoast_To_REST_API {
 		return $res;
 	}
 
-	function wp_api_encode_yoast_tag( $tag ) {
-		query_posts( array(
+	function wp_api_encode_yoast_tag($tag)
+	{
+		query_posts(array(
 			'tag_id' => $tag['id'],
-		) );
+		));
 
 		the_post();
 
@@ -178,19 +181,21 @@ class Yoast_To_REST_API {
 	}
 }
 
-function WPAPIYoast_init() {
-	if ( class_exists( 'WPSEO_Frontend' ) ) {
+function WPAPIYoast_init()
+{
+	if (class_exists('WPSEO_Frontend')) {
 		include __DIR__ . '/classes/class-wpseo-frontend-to-rest-api.php';
 
 		$yoast_To_REST_API = new Yoast_To_REST_API();
 	} else {
-		add_action( 'admin_notices', 'wpseo_not_loaded' );
+		add_action('admin_notices', 'wpseo_not_loaded');
 	}
 }
 
-function wpseo_not_loaded() {
+function wpseo_not_loaded()
+{
 	printf(
 		'<div class="error"><p>%s</p></div>',
-		__( '<b>Yoast to REST API</b> plugin not working because <b>Yoast SEO</b> plugin is not active.' )
+		__('<b>Yoast to REST API</b> plugin not working because <b>Yoast SEO</b> plugin is not active.')
 	);
 }
